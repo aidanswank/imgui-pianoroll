@@ -15,15 +15,18 @@
 #include "entt/entt.hpp"
 #include "ImSequencer.h"
 
+#include "MidiFileWrapper.h"
+
 #define WinWidth 320 * 2
 #define WinHeight 240 * 2
 
-#define SEQUENTITY_IMPLEMENTATION
-#include "Sequentity.h"
-entt::registry registry;
+// #define SEQUENTITY_IMPLEMENTATION
+// #include "Sequentity.h"
+// entt::registry registry;
 
 int sel = -1;
 ImVec2 myvec = {-1,-1};
+
 void SequencerWindow(bool* isOpen, std::vector<ImVec2>& points)
 {
     ImGui::Begin("pianoroll",isOpen,ImGuiWindowFlags_NoTitleBar);
@@ -123,51 +126,15 @@ int main(void)
 
     bool isOpenSequencerWindow = true;
     std::vector<ImVec2> points = { ImVec2(0,0), ImVec2(32,32), ImVec2(32,64), ImVec2(32,128) };
-
-
-// Along with an entity
-auto entity = registry.create();
-
-// Add some data..
-struct Position {
-    float x { 0.0f };
-    float y { 0.0f };
-};
-registry.assign<Position>(entity, 5.0f, 1.0f);  // 2nd argument onwards passed to constructor
-
-// ..and then iterate over that data
-registry.view<Position>().each([](auto& position) {
-    position.x += 1.0f;
-});
-
-// Author some data
-// entt::registry& registry;
-entity = registry.create();
-
-// Events may carry application data and a type for you to identify it with
-struct MyEventData {
-    float value { 0.0f };
-};
-
-enum {
-    MyEventType = 0
-};
-
-auto& track = registry.assign<Sequentity::Track>(entity); {
-    track.label = "My first track";
-    track.color = ImColor::HSV(0.0f, 0.5f, 0.75f);
-}
-
-auto& channel = Sequentity::PushChannel(track, MyEventType); {
-    channel.label = "My first channel";
-    channel.color = ImColor::HSV(0.33f, 0.5f, 0.75f);
-}
-
-auto& event = Sequentity::PushEvent(channel); {
-    event.time = 1;
-    event.length = 50;
-    event.color = ImColor::HSV(0.66f, 0.5f, 0.75f);
-}
+    
+    MidiFileWrapper mid;
+    int err = mid.init("./res/midis/background_guitar.mid");
+    if(err==0)
+    {
+        std::cout << "error loading midi!!" << std::endl;
+    }
+    // mid.printData();
+    std::vector<MidiTrack> tracks = mid.makeStructs();
 
     while(isRunning)
     {
@@ -228,7 +195,8 @@ auto& event = Sequentity::PushEvent(channel); {
 
             ImGui::Begin("test",&isOpenSequencerWindow);
 // Draw it!
-Sequentity::EventEditor(registry);
+// Sequentity::EventEditor(registry);
+
             ImGui::End();
 
 

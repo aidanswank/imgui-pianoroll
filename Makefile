@@ -2,7 +2,7 @@ SOURCES=$(wildcard src/*.cpp)
 SOURCES+=$(wildcard vendor/*/*.cpp)
 INCLUDES = $(shell pkg-config --libs sdl2)
 CFLAGS = $(shell pkg-config --cflags sdl2)
-CC = g++
+CC = clang++
 
 game:
 	$(CC) -std=c++17 \
