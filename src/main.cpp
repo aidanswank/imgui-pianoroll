@@ -12,8 +12,15 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
+#include "entt/entt.hpp"
+#include "ImSequencer.h"
+
 #define WinWidth 320 * 2
 #define WinHeight 240 * 2
+
+#define SEQUENTITY_IMPLEMENTATION
+#include "Sequentity.h"
+entt::registry registry;
 
 int sel = -1;
 ImVec2 myvec = {-1,-1};
@@ -32,22 +39,12 @@ void SequencerWindow(bool* isOpen, std::vector<ImVec2>& points)
         ImGui::SetCursorPos(ImVec2(points[i].x,points[i].y));
         std::string s = std::to_string(i);
 
-        if(ImGui::Button(s.c_str(), size))
+        ImGui::Button(s.c_str(), size);
+        if(ImGui::IsItemClicked())
         {
-            print("clicked button ",s.c_str());
-            sel = -1;
-        //     // if( ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
-        //     // {
-        //     //     ImVec2 pos = ImGui::GetMouseDragDelta();
-        //     //     print("dragged ", sel, " ",pos.x," ",pos.y);
-        //     // }
-        }    
-
-        if( ImGui::IsItemClicked())
-        {
-            // print("aaaa",s.c_str());
+            // print("c",s.c_str());
             sel = i;
-            print("last hovered", s.c_str(), " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
+            print("isitemclicked", s.c_str(), " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
             myvec = points[i];
         }
 
@@ -61,14 +58,15 @@ void SequencerWindow(bool* isOpen, std::vector<ImVec2>& points)
         if(sel!=-1)
         {
             points[sel].x = myvec.x + new_pos.x;
-            points[sel].y = myvec.y + new_pos.y;
+            points[sel].y = round((myvec.y + new_pos.y)/32)*32;
         }
     }
-    // if(ImGui::IsMouseDown(ImGuiMouseButton_Left))
-    // {
-    //     print("mouse down");
-    // }
 
+    if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+    {
+        print("ImGuiMouseButton_Left released");
+        sel = -1;
+    }
 
     ImGui::End();
 }
@@ -124,7 +122,52 @@ int main(void)
     bool isFullScreen = true;
 
     bool isOpenSequencerWindow = true;
-    std::vector<ImVec2> points = { ImVec2(0,0), ImVec2(32,32), ImVec2(32,64) };
+    std::vector<ImVec2> points = { ImVec2(0,0), ImVec2(32,32), ImVec2(32,64), ImVec2(32,128) };
+
+
+// Along with an entity
+auto entity = registry.create();
+
+// Add some data..
+struct Position {
+    float x { 0.0f };
+    float y { 0.0f };
+};
+registry.assign<Position>(entity, 5.0f, 1.0f);  // 2nd argument onwards passed to constructor
+
+// ..and then iterate over that data
+registry.view<Position>().each([](auto& position) {
+    position.x += 1.0f;
+});
+
+// Author some data
+// entt::registry& registry;
+entity = registry.create();
+
+// Events may carry application data and a type for you to identify it with
+struct MyEventData {
+    float value { 0.0f };
+};
+
+enum {
+    MyEventType = 0
+};
+
+auto& track = registry.assign<Sequentity::Track>(entity); {
+    track.label = "My first track";
+    track.color = ImColor::HSV(0.0f, 0.5f, 0.75f);
+}
+
+auto& channel = Sequentity::PushChannel(track, MyEventType); {
+    channel.label = "My first channel";
+    channel.color = ImColor::HSV(0.33f, 0.5f, 0.75f);
+}
+
+auto& event = Sequentity::PushEvent(channel); {
+    event.time = 1;
+    event.length = 50;
+    event.color = ImColor::HSV(0.66f, 0.5f, 0.75f);
+}
 
     while(isRunning)
     {
@@ -182,6 +225,12 @@ int main(void)
 
             // ImGui::ShowDemoWindow();
             SequencerWindow(&isOpenSequencerWindow, points);
+
+            ImGui::Begin("test",&isOpenSequencerWindow);
+// Draw it!
+Sequentity::EventEditor(registry);
+            ImGui::End();
+
 
             ImGui::PopFont();
         }
