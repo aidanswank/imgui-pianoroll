@@ -26,8 +26,10 @@
 
 int sel = -1;
 ImVec2 myvec = {-1,-1};
+int ticksPerColum = 5;
+int noteHeight = 5;
 
-void SequencerWindow(bool* isOpen, std::vector<ImVec2>& points)
+void SequencerWindow(bool* isOpen, MidiTrack& track)
 {
     ImGui::Begin("pianoroll",isOpen,ImGuiWindowFlags_NoTitleBar);
     
@@ -36,34 +38,45 @@ void SequencerWindow(bool* isOpen, std::vector<ImVec2>& points)
     // print(p.x,p.y);
     ImGuiIO &io = ImGui::GetIO();
 
-    for(int i = 0; i < points.size(); i++)
+    for(int i = 0; i < track.notes.size(); i++)
     {
-        ImVec2 size = ImVec2( 32 , 32 );
-        ImGui::SetCursorPos(ImVec2(points[i].x,points[i].y));
+
+        float note_w = track.notes[i].duration / ticksPerColum;
+        // noteRect.h = midiEditor.noteHeight;
+
+        ImVec2 size = ImVec2( note_w , noteHeight );
+
+        float note_x = ((track.notes[i].start) / ticksPerColum);
+
+        int noteRange = track.maxNote - track.minNote;
+        float note_y = ((noteRange) - (track.notes[i].key - track.minNote)) * noteHeight;
+        ImVec2 pos = ImVec2( note_x , note_y );
+
+        ImGui::SetCursorPos(pos);
         std::string s = std::to_string(i);
 
         ImGui::Button(s.c_str(), size);
-        if(ImGui::IsItemClicked())
-        {
-            // print("c",s.c_str());
-            sel = i;
-            print("isitemclicked", s.c_str(), " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
-            myvec = points[i];
-        }
+        // if(ImGui::IsItemClicked())
+        // {
+        //     // print("c",s.c_str());
+        //     sel = i;
+        //     print("isitemclicked", s.c_str(), " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
+        //     myvec = points[i];
+        // }
 
     }
 
-    if( ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
-    {
-        print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
-        ImVec2 new_pos = ImGui::GetMouseDragDelta();
-        // points[i].x = pos.x;
-        if(sel!=-1)
-        {
-            points[sel].x = myvec.x + new_pos.x;
-            points[sel].y = round((myvec.y + new_pos.y)/32)*32;
-        }
-    }
+    // if( ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
+    // {
+    //     print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
+    //     ImVec2 new_pos = ImGui::GetMouseDragDelta();
+    //     // points[i].x = pos.x;
+    //     if(sel!=-1)
+    //     {
+    //         points[sel].x = myvec.x + new_pos.x;
+    //         points[sel].y = round((myvec.y + new_pos.y)/32)*32;
+    //     }
+    // }
 
     if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
     {
@@ -191,7 +204,8 @@ int main(void)
             ImGui::End();
 
             // ImGui::ShowDemoWindow();
-            SequencerWindow(&isOpenSequencerWindow, points);
+            // SequencerWindow(&isOpenSequencerWindow, points);
+            SequencerWindow(&isOpenSequencerWindow, tracks[0]);
 
             ImGui::PopFont();
         }
