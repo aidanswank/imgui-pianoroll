@@ -24,8 +24,9 @@
 // #include "Sequentity.h"
 // entt::registry registry;
 
-int sel = -1;
-ImVec2 myvec = {-1,-1};
+int sel = -1; // track note index??
+// ImVec2 myvec = {-1,-1};
+Note mynote;
 int ticksPerColum = 5;
 int noteHeight = 5;
 
@@ -56,27 +57,29 @@ void SequencerWindow(bool* isOpen, MidiTrack& track)
         std::string s = std::to_string(i);
 
         ImGui::Button(s.c_str(), size);
-        // if(ImGui::IsItemClicked())
-        // {
-        //     // print("c",s.c_str());
-        //     sel = i;
-        //     print("isitemclicked", s.c_str(), " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
-        //     myvec = points[i];
-        // }
+        if(ImGui::IsItemClicked())
+        {
+            // print("note",s.c_str());
+            sel = i;
+            print("isitemclicked", s.c_str(), " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
+            mynote = track.notes[sel];
+        }
 
     }
 
-    // if( ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
-    // {
-    //     print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
-    //     ImVec2 new_pos = ImGui::GetMouseDragDelta();
-    //     // points[i].x = pos.x;
-    //     if(sel!=-1)
-    //     {
-    //         points[sel].x = myvec.x + new_pos.x;
-    //         points[sel].y = round((myvec.y + new_pos.y)/32)*32;
-    //     }
-    // }
+    if( ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
+    {
+        print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
+        ImVec2 new_pos = ImGui::GetMouseDragDelta();
+        // points[i].x = pos.x;
+        if(sel!=-1)
+        {
+            // points[sel].x = myvec.x + new_pos.x;
+            track.notes[sel].start = mynote.start + (new_pos.x*ticksPerColum);
+            // points[sel].y = round((myvec.y + new_pos.y)/32)*32;
+            track.notes[sel].key = mynote.key + (round(new_pos.y/noteHeight)*-1);
+        }
+    }
 
     if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
     {
