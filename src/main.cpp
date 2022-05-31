@@ -27,13 +27,24 @@
 int sel = -1; // track note index??
 // ImVec2 myvec = {-1,-1};
 Note mynote;
-int ticksPerColum = 5;
-int noteHeight = 5;
+float ticksPerColum = 2;
+float noteHeight = 8;
 
 void SequencerWindow(bool* isOpen, MidiTrack& track)
 {
-    ImGui::Begin("pianoroll",isOpen,ImGuiWindowFlags_NoTitleBar);
-    
+    ImGui::Begin("toolbar",isOpen,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::SliderFloat("width",&ticksPerColum,1.f,16);
+    // ImGui::SameLine();
+    ImGui::SliderFloat("height",&noteHeight,1.f,16);
+    // ImGui::VSliderFloat("height",ImVec2(16,200),&noteHeight,1.f,16);
+    // ticksPerColum = adjustTps;
+    ImGui::End();
+
+    // ImGui::Begin("toolbar2",isOpen,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_HorizontalScrollbar);
+    // ImGui::End();
+
+    ImGui::Begin("pianoroll",isOpen,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_HorizontalScrollbar);
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     const ImVec2 p = ImGui::GetCursorScreenPos(); 
     // print(p.x,p.y);
@@ -144,7 +155,7 @@ int main(void)
     std::vector<ImVec2> points = { ImVec2(0,0), ImVec2(32,32), ImVec2(32,64), ImVec2(32,128) };
     
     MidiFileWrapper mid;
-    int err = mid.init("./res/midis/background_guitar.mid");
+    int err = mid.init("./res/midis/ableton.mid");
     if(err==0)
     {
         std::cout << "error loading midi!!" << std::endl;
