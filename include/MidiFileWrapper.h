@@ -189,7 +189,12 @@ struct MidiFileWrapper
                 }
             }
 
-            trackVec.push_back(trackStruct);
+            // print(trackStruct.notes.size());
+            // filter dead tracks
+            if(trackStruct.notes.size()!=0)
+            {
+                trackVec.push_back(trackStruct);
+            }
         }
 
         return trackVec;

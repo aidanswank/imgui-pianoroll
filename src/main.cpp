@@ -193,13 +193,6 @@ int main(void)
             // ImGui::ShowDemoWindow();
             SequencerWindow(&isOpenSequencerWindow, points);
 
-            ImGui::Begin("test",&isOpenSequencerWindow);
-// Draw it!
-// Sequentity::EventEditor(registry);
-
-            ImGui::End();
-
-
             ImGui::PopFont();
         }
         
