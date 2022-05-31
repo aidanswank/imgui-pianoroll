@@ -1,28 +1,77 @@
-// Include GLEW
-#include <GL/glew.h>
-
-// Include GLFW
-// #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <imgui/imgui.h>
 #include <imgui/imgui_stdlib.h>
 #include <imgui/imgui_impl_sdl.h>
 #include <imgui/imgui_impl_opengl3.h>
 
-#include <iostream>
-
-#include <stdio.h>
-#include <stdint.h>
-#include <assert.h>
+// #include <iostream>
+#include "vprint.h"
+// #include <stdio.h>
+// #include <stdint.h>
+// #include <assert.h>
+#include <vector>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
 #define WinWidth 320 * 2
 #define WinHeight 240 * 2
 
+int sel = -1;
+ImVec2 myvec = {-1,-1};
+void SequencerWindow(bool* isOpen, std::vector<ImVec2>& points)
+{
+    ImGui::Begin("pianoroll",isOpen,ImGuiWindowFlags_NoTitleBar);
+    
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const ImVec2 p = ImGui::GetCursorScreenPos(); 
+    // print(p.x,p.y);
+    ImGuiIO &io = ImGui::GetIO();
+
+    for(int i = 0; i < points.size(); i++)
+    {
+        ImVec2 size = ImVec2( 32 , 32 );
+        ImGui::SetCursorPos(ImVec2(points[i].x,points[i].y));
+        std::string s = std::to_string(i);
+
+        if(ImGui::Button(s.c_str(), size))
+        {
+            print("clicked button ",s.c_str());
+            sel = -1;
+        //     // if( ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
+        //     // {
+        //     //     ImVec2 pos = ImGui::GetMouseDragDelta();
+        //     //     print("dragged ", sel, " ",pos.x," ",pos.y);
+        //     // }
+        }    
+
+        if( ImGui::IsItemClicked())
+        {
+            // print("aaaa",s.c_str());
+            sel = i;
+            print("last hovered", s.c_str(), " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
+            myvec = points[i];
+        }
+
+    }
+
+    if( ImGui::IsMouseDragging(ImGuiMouseButton_Left) )
+    {
+        print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
+        ImVec2 new_pos = ImGui::GetMouseDragDelta();
+        // points[i].x = pos.x;
+        if(sel!=-1)
+        {
+            points[sel].x = myvec.x + new_pos.x;
+            points[sel].y = myvec.y + new_pos.y;
+        }
+    }
+    // if(ImGui::IsMouseDown(ImGuiMouseButton_Left))
+    // {
+    //     print("mouse down");
+    // }
+
+
+    ImGui::End();
+}
 
 int main(void)
 {
@@ -38,7 +87,7 @@ int main(void)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // uint32_t WindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI;
-    uint32_t WindowFlags = SDL_WINDOW_OPENGL | SDL_RENDERER_PRESENTVSYNC;
+    uint32_t WindowFlags = SDL_WINDOW_OPENGL | SDL_RENDERER_PRESENTVSYNC | SDL_WINDOW_RESIZABLE;
     SDL_Window *Window = SDL_CreateWindow("OpenGL Test", 0, 0, WinWidth, WinHeight, WindowFlags);
     // assert(Window);
     if (Window == NULL)
@@ -49,17 +98,8 @@ int main(void)
     SDL_GLContext Context = SDL_GL_CreateContext(Window);
     SDL_GL_MakeCurrent(Window, Context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
-    // Initialize GLEW
-    glewExperimental = true; // Needed for core profile
-    if (glewInit() != GLEW_OK)
-    {
-        fprintf(stderr, "Failed to initialize GLEW\n");
-        // getchar();
-        // glfwTerminate();
-        // return nullptr;
-    }
 
-     IMGUI_CHECKVERSION();
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
@@ -68,9 +108,9 @@ int main(void)
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
-    // ImGui::StyleColorsDark();
+    ImGui::StyleColorsDark();
     // ImGui::StyleColorsClassic();
-    ImGui::StyleColorsLight();
+    // ImGui::StyleColorsLight();
     ImGuiStyle* style = &ImGui::GetStyle();
 	style->FrameBorderSize = 1.0f;
 
@@ -78,8 +118,13 @@ int main(void)
     ImGui_ImplSDL2_InitForOpenGL(Window, Context);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
+    ImFont* font = io.Fonts->AddFontFromFileTTF("./res/fonts/unifont-14.0.01.ttf", 16.0f);
+
     bool isRunning = true;
     bool isFullScreen = true;
+
+    bool isOpenSequencerWindow = true;
+    std::vector<ImVec2> points = { ImVec2(0,0), ImVec2(32,32), ImVec2(32,64) };
 
     while(isRunning)
     {
@@ -117,7 +162,7 @@ int main(void)
 
         glClear( GL_COLOR_BUFFER_BIT );
 
-    //// imgui shit
+
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame(Window);
@@ -125,13 +170,9 @@ int main(void)
 
         {
 
-            static std::string buf = "";
+            ImGui::PushFont(font);
 
-            // ImGui::PushFont(font);
-
-            ImGui::Begin("Window");
-
-            ImGui::InputText("Hello", &buf);
+            ImGui::Begin("debug");
 
             // ImGui::SliderFloat("rotation", &rot_amount, 0.0f, 360.0f);
 
@@ -139,11 +180,13 @@ int main(void)
 
             ImGui::End();
 
-            ImGui::ShowDemoWindow();
+            // ImGui::ShowDemoWindow();
+            SequencerWindow(&isOpenSequencerWindow, points);
 
-            // ImGui::PopFont();
+            ImGui::PopFont();
         }
         
+
         // Rendering
         ImGui::Render();
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);

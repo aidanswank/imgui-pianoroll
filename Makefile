@@ -13,4 +13,4 @@ game:
 	-Iinclude \
 	-Ivendor \
 	$(SOURCES) \
-	-o play -framework OpenGl -lglew -lSDL2
+	-o play -framework OpenGl
