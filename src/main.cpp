@@ -152,7 +152,6 @@ void SequencerWindow(bool* isOpen, MidiTrack& track)
     ImGui::SliderFloat("width",&ticksPerColum,1.f,32);
     ImGui::SameLine();
     ImGui::SliderFloat("height",&noteHeight,1.f,32);
-    // ticksPerColum = adjustTps;
     ImGui::End();
 
     // ImGui::Begin("sidetoolbar",isOpen,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_HorizontalScrollbar);
@@ -162,8 +161,17 @@ void SequencerWindow(bool* isOpen, MidiTrack& track)
     ImGui::Begin("pianoroll",isOpen,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_HorizontalScrollbar);
     
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
     // draw_list->AddRect(ImVec2(10, 10), ImVec2(100, 100), ImColor(255, 0, 0));
     const ImVec2 p = ImGui::GetCursorScreenPos(); 
+
+    // draw grid lines
+    for(int i = 0; i < 200; i++)
+    {
+        float x = ((float)(track.tpq / ticksPerColum)/4) * i;
+        draw_list->AddLine(ImVec2(p.x+x, p.y+0),ImVec2(p.x+x, p.y+ImGui::GetWindowHeight()), ImColor(100,100,100,50));
+    }
+
     // print(p.x,p.y);
     ImGuiIO &io = ImGui::GetIO();
     ImGuiStyle& style = ImGui::GetStyle();
@@ -222,7 +230,11 @@ void SequencerWindow(bool* isOpen, MidiTrack& track)
         if(sel!=-1)
         {
             // points[sel].x = myvec.x + new_pos.x;
+            // ((float)(track.tpq / ticksPerColum)/4)
+            float hey = ((float)(track.tpq)/4);
             track.notes[sel].start = mynote.start + (new_pos.x*ticksPerColum);
+            // snap to grid
+            track.notes[sel].start = round(track.notes[sel].start/hey)*hey;
             // points[sel].y = round((myvec.y + new_pos.y)/32)*32;
             track.notes[sel].key = mynote.key + (round(new_pos.y/noteHeight)*-1);
         }

@@ -25,6 +25,7 @@ struct MidiTrack
     std::string name;
    int minNote = 64;
    int maxNote = 64;
+   int tpq;
    std::vector<Note> notes;
 //    std::vector<smf::MidiEvent> events;
    smf::MidiEventList *eventlist;
@@ -146,6 +147,9 @@ struct MidiFileWrapper
 
                 smf::MidiEventList mytrack = midifile[track];
                 trackStruct.eventlist = &midifile[track];
+
+                // hacky????
+                trackStruct.tpq = midifile.getTicksPerQuarterNote();
 
                 // note.eventIndex = event;
 
