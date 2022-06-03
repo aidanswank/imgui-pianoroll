@@ -177,7 +177,7 @@ struct MidiFileWrapper
                     if (midifile[track][event].isNoteOn())
                     {
                     note.duration = midifile[track][event].getTickDuration();
-                    note.key = midifile[track][event][1];
+                    note.key = midifile[track][event].getKeyNumber();
                     note.startNote = &midifile[track][event];
                     note.endNote = midifile[track][event].getLinkedEvent();
                     // print("note info",note.duration,note.key,note.startNote,note.endNote);

@@ -62,6 +62,10 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 
 	for (int i = 0; i < track.notes.size(); i++)
 	{
+
+        ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
+        ImGui::PopStyleColor();
+
 		// set up note rectangle dimensions
 		float note_w = track.notes[i].duration / prdata.ticksPerColum;
 		float note_x = ((track.notes[i].start) / prdata.ticksPerColum) + 32;
@@ -72,20 +76,48 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 		// float note_y = ((track.maxNote) - (track.notes[i].key - track.minNote)) * noteHeight;
 
 		// turn into imgui vecs
-		ImVec2 size = ImVec2(note_w, prdata.noteHeight);
+		// ImVec2 size = ImVec2(note_w, prdata.noteHeight);
 		// ImVec2 pos = ImVec2(style.WindowPadding.x + note_x, style.WindowPadding.y + note_y);
-		ImVec2 pos = ImVec2(note_x, note_y);
+		// ImVec2 pos = ImVec2(note_x, note_y);
+		// ImGui::SetCursorPos(pos);
 
 		// set xy pos were we draw button
-		ImGui::SetCursorPos(pos);
 		// print(p.x,p.y);
+
+        smf::MidiEvent *endNote = track.notes[i].endNote;
+        int endDur = endNote->getTickDuration();
+        int endX = ((float)endNote->tick / prdata.ticksPerColum) + 32 - 8;
+        // print(dur);
+        ImVec2 endbtnsize = ImVec2(8, prdata.noteHeight);
+        ImVec2 endbtnpos = ImVec2(endX, note_y);
+
+		ImGui::SetCursorPos(endbtnpos);
+        ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
+		ImGui::Button(std::to_string(i).c_str(),endbtnsize);
+        ImGui::PopStyleColor();
+
+        smf::MidiEvent *startNote = track.notes[i].startNote;
+        int startDur = startNote->getTickDuration();
+        int startX = ((float)startNote->tick / prdata.ticksPerColum) + 32;
+        // print(dur);
+        ImVec2 startbtnsize = ImVec2(8, prdata.noteHeight);
+        ImVec2 startbtnpos = ImVec2(startX, note_y);
+
+		ImGui::SetCursorPos(startbtnpos);
+        ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
+		ImGui::Button(std::to_string(i).c_str(),startbtnsize);
+        ImGui::PopStyleColor();
 
 		// id because we are using invisible buttons
 		// ImGui::PushID(i);
 		// ImGui::InvisibleButton(" ", size);
 		// ImGui::PopID();
+        
 
 		// DEBUG button 
+
+        		// ImGui::PushStyleColor(ImGuiCol_Button,key_color);
+
 		// ImGui::Button(std::to_string(i).c_str(),size);
 
 		// ImGui::SameLine();
@@ -96,6 +128,7 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 
 		// draw_list->AddRectFilled(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
 
+		ImVec2 size = ImVec2(note_w, prdata.noteHeight);
 		ImGui::SetCursorPos(ImVec2(note_x,note_y));
 		ImVec2 button_size(note_w, prdata.noteHeight);
 		ImGui::PushID(i);
