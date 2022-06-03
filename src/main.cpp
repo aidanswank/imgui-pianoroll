@@ -13,16 +13,18 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
 
-#include "entt/entt.hpp"
-#include "ImSequencer.h"
+// #include "entt/entt.hpp"
 
 #include "MidiFileWrapper.h"
 
 #define WinWidth 320 * 2
 #define WinHeight 240 * 2
 
+
+
 // int piano_keys[12]={0,255,0,255,0,0,255,0,255,0,255,0};
 int piano_keys[12]={255,0,255,0,255,255,0,255,0,255,0,255};
+std::string note_names[12]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
 
 
 void DockingToolbar(const char* name, ImGuiAxis* p_toolbar_axis)
@@ -270,11 +272,14 @@ void SequencerWindow(bool *isOpen, MidiTrack &track)
 	// ImGui::VSliderFloat("height",ImVec2(16,200),&noteHeight,1.f,16);
 	// ImGui::End();
 
-	ImGui::Begin("pianoroll", isOpen, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::Begin("pianoroll", isOpen, ImGuiWindowFlags_HorizontalScrollbar);
 static ImGuiAxis toolbar1_axis = ImGuiAxis_X;
 DockingToolbar("Toolbar1", &toolbar1_axis);
 static ImGuiAxis toolbar2_axis = ImGuiAxis_Y;
 DockingToolbar("Toolbar2", &toolbar2_axis);
+	// const ImVec2 p = ImGui::GetCursorScreenPos();
+
+	const ImVec2 wp = ImGui::GetWindowPos();
 
 	// ImGui::BeginChild("child",ImVec2(ImGui::GetWindowWidth(),24),true);
     // // ImGui::BeginGroup();
@@ -285,68 +290,85 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 
 	ImDrawList *draw_list = ImGui::GetWindowDrawList();
 
-	// draw_list->AddRect(ImVec2(10, 10), ImVec2(100, 100), ImColor(255, 0, 0));
-	const ImVec2 p = ImGui::GetCursorScreenPos();
-
-	const ImVec2 wp = ImGui::GetWindowPos();
-
-	// draw grid lines
-	for (int i = 0; i < 200; i++)
-	{
-		float x = ((float)(track.tpq / ticksPerColum) / 4) * i;
-		draw_list->AddLine(ImVec2(p.x + x, p.y + 0), ImVec2(p.x + x, p.y + ImGui::GetWindowHeight()), ImColor(100, 100, 100, 50));
-	}
-
-		// draw_list->AddRectFilled(ImVec2(wp.x + 16, p.y + 16), ImVec2(wp.x + 16 + 64, p.y + 16 + 24), ImColor(255,0,255), 1.0f, ImDrawCornerFlags_All);
-		
-		// draw_list->AddRectFilled(ImVec2(wp.x + 16, p.y + 42), ImVec2(wp.x + 16 + 64, p.y + 42 + 24), ImColor(255,0,0), 1.0f, ImDrawCornerFlags_All);
-
-		// draw_list->AddRectFilled(ImVec2(wp.x + 16, p.y + 16), ImVec2(wp.x + 16 + 64, p.y + 16 + 24), ImColor((255/(i+1)),0,255), 1.0f, ImDrawCornerFlags_All);
-//
-	
 	// print(p.x,p.y);
 	ImGuiIO &io = ImGui::GetIO();
 	ImGuiStyle &style = ImGui::GetStyle();
 
 	// loop through all notes
+	ImVec2 p2 = ImGui::GetWindowPos();
+	// p2.x += style.WindowPadding.x;
+	// p2.y += style.WindowPadding.y;
+	p2.x -= ImGui::GetScrollX();
+	p2.y -= ImGui::GetScrollY();
+
+	ImVec2 mouse_pos = ImGui::GetMousePos();
+	// print(mouse_pos.x,mouse_pos.y-p2.y);
+
+	float relative_mouseY = mouse_pos.y-p2.y;
+
+	// grid grids
+	for (int i = 0; i < 200; i++)
+	{
+		float x = ((float)(track.tpq / ticksPerColum) / 4) * i;
+		draw_list->AddLine(ImVec2(p2.x + x + 32, p2.y + 0), ImVec2(p2.x + x + 32, p2.y + ImGui::GetWindowHeight()+ImGui::GetScrollY()), ImColor(100, 100, 100, 50));
+	}
+
 	for (int i = 0; i < track.notes.size(); i++)
 	{
 		// set up note rectangle dimensions
 		float note_w = track.notes[i].duration / ticksPerColum;
-		float note_x = ((track.notes[i].start) / ticksPerColum);
+		float note_x = ((track.notes[i].start) / ticksPerColum) + 32;
 		int noteRange = track.maxNote - track.minNote;
-		float note_y = ((noteRange) - (track.notes[i].key - track.minNote)) * noteHeight;
+		// float note_y = ((noteRange) - (track.notes[i].key - track.minNote)) * noteHeight;
+		float note_y = (127-track.notes[i].key) * noteHeight;
+
+		// float note_y = ((track.maxNote) - (track.notes[i].key - track.minNote)) * noteHeight;
 
 		// turn into imgui vecs
 		ImVec2 size = ImVec2(note_w, noteHeight);
-		ImVec2 pos = ImVec2(style.WindowPadding.x + note_x, style.WindowPadding.y + note_y);
+		// ImVec2 pos = ImVec2(style.WindowPadding.x + note_x, style.WindowPadding.y + note_y);
+		ImVec2 pos = ImVec2(note_x, note_y);
 
 		// set xy pos were we draw button
 		ImGui::SetCursorPos(pos);
+		// print(p.x,p.y);
 
 		// id because we are using invisible buttons
-		ImGui::PushID(i);
-		ImGui::InvisibleButton(" ", size);
-		ImGui::PopID();
+		// ImGui::PushID(i);
+		// ImGui::InvisibleButton(" ", size);
+		// ImGui::PopID();
+
+		// DEBUG button 
+		// ImGui::Button(std::to_string(i).c_str(),size);
 
 		// ImGui::SameLine();
 
 		// get color from current loaded style
-		uint32_t mycolor = ImColor(style.Colors[ImGuiCol_Button]);
-		draw_list->AddRectFilled(ImVec2(p.x + note_x, p.y + note_y), ImVec2(p.x + note_x + note_w, p.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
+		// uint32_t mycolor = ImColor(style.Colors[ImGuiCol_Button]);
+		// draw_list->AddRectFilled(ImVec2(p.x + note_x, p.y + note_y), ImVec2(p.x + note_x + note_w, p.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
+
+		// draw_list->AddRectFilled(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
+
+		ImGui::SetCursorPos(ImVec2(note_x,note_y));
+		ImVec2 button_size(note_w, noteHeight);
+		ImGui::PushID(i);
+		// ImGui::PushStyleColor(ImGuiCol_Button,key_color);
+		ImGui::Button(" ",button_size);
+		// ImGui::PopStyleColor();
+		ImGui::PopID();
 
 		// show outline around button when hovered
 		if (ImGui::IsItemHovered())
 		{
 			// print("hovering..");
-			draw_list->AddRect(ImVec2(p.x + note_x, p.y + note_y), ImVec2(p.x + note_x + note_w, p.y + note_y + noteHeight), ImColor(255, 255, 0), 1.0f, ImDrawCornerFlags_All);
+			draw_list->AddRect(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), ImColor(255, 255, 0), 1.0f, ImDrawCornerFlags_All);
 		}
 
 		// selects note
 		if (ImGui::IsItemClicked())
 		{
 			sel = i;
-			print("isitemclicked", i, " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
+			// print("isitemclicked", i, " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
 			mynote = track.notes[sel];
 		}
 	}
@@ -370,18 +392,55 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 		}
 	}
 
+	for(int i = 0; i < 128; i++)
+	{
+		int i2 = 127-i;
+		int bw = piano_keys[i%12];
+		uint32_t key_color = ImColor(bw,bw,bw);
+
+		ImGui::SetCursorPos(ImVec2(ImGui::GetScrollX(),noteHeight*i2));
+		ImVec2 button_size(32, noteHeight);
+		ImGui::PushID(i);
+		ImGui::PushStyleColor(ImGuiCol_Button,key_color);
+		ImGui::Button(" ",button_size);
+		// if(ImGui::IsItemHovered())
+		// {
+		// 	// ImGui::PushStyleColor(ImGuiCol_Button,ImColor(255,0,255));
+		// 	print("hovering...");
+		// 	ImGui::SetCursorPos(ImVec2(ImGui::GetScrollX()+32,noteHeight*i2));
+		// 	ImGui::Text(std::to_string(i).c_str());
+		// }
+		ImGui::PopStyleColor();
+		ImGui::PopID();
+
+		// draw_list->AddRectFilled(
+		// 		ImVec2(ImGui::GetWindowPos().x,
+		// 	p2.y + (i*noteHeight)),
+		// 		ImVec2(ImGui::GetWindowPos().x + 32,
+		// 	p2.y + noteHeight + (i*noteHeight)),
+		// 	key_color, 1.0f, 
+		// 	ImDrawCornerFlags_All
+		// );
+
+	}
+
+
+
+	// note debuggggg
+	float nnn = floor(relative_mouseY/noteHeight);
+	int notenum = 127-int(nnn);
+	int octave = int(notenum / 12) - 1;
+	int note = (notenum % 12);
+	// print(note_names[note]);
+	ImGui::SetCursorPos(ImVec2(ImGui::GetScrollX()+38,nnn*noteHeight));
+	std::string text = note_names[note] + " " + std::to_string(notenum);
+	ImGui::Text(text.c_str());
+
 	// resets note selection
 	if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 	{
 		print("ImGuiMouseButton_Left released");
 		sel = -1;
-	}
-
-	for(int i = 0; i < 127; i++)
-	{
-		int bw = piano_keys[i%12];
-		uint32_t key_color = ImColor(bw,bw,bw);
-		draw_list->AddRectFilled(ImVec2(wp.x, p.y + (i*noteHeight)), ImVec2(wp.x + 32, p.y + noteHeight + (i*noteHeight)), key_color, 1.0f, ImDrawCornerFlags_All);
 	}
 
 	ImGui::End();
@@ -471,6 +530,7 @@ int main(void)
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;	  // Enable Docking
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;	  // Enable Multi-Viewport / Platform Windows
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
 	// io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
 	// Setup Dear ImGui style
