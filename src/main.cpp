@@ -253,19 +253,27 @@ void ShowExampleAppDockSpace(bool *p_open)
 // #include "Sequentity.h"
 // entt::registry registry;
 
-int sel = -1; // track note index??
-// ImVec2 myvec = {-1,-1};
-Note mynote;
-float ticksPerColum = 2;
-float noteHeight = 8;
+// int sel = -1; // track note index??
+// // ImVec2 myvec = {-1,-1};
+// Note mynote;
+// float ticksPerColum = 2;
+// float noteHeight = 8;
 
-void SequencerWindow(bool *isOpen, MidiTrack &track)
+struct pianoRoll {
+	int sel = -1; // track note index??
+	// ImVec2 myvec = {-1,-1};
+	Note mynote; // last note
+	float ticksPerColum = 2;
+	float noteHeight = 8;
+};
+
+void SequencerWindow(bool *isOpen, MidiTrack &track, pianoRoll& prdata)
 {
 
 	ImGui::Begin("toptoolbar", isOpen, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_HorizontalScrollbar);
-	ImGui::SliderFloat("width", &ticksPerColum, 1.f, 32);
+	ImGui::SliderFloat("width", &prdata.ticksPerColum, 1.f, 32);
 	// ImGui::SameLine();
-	ImGui::SliderFloat("height", &noteHeight, 1.f, 32);
+	ImGui::SliderFloat("height", &prdata.noteHeight, 1.f, 32);
 	ImGui::End();
 
 	// ImGui::Begin("sidetoolbar",isOpen,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_HorizontalScrollbar);
@@ -309,23 +317,23 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 	// grid grids
 	for (int i = 0; i < 200; i++)
 	{
-		float x = ((float)(track.tpq / ticksPerColum) / 4) * i;
+		float x = ((float)(track.tpq / prdata.ticksPerColum) / 4) * i;
 		draw_list->AddLine(ImVec2(p2.x + x + 32, p2.y + 0), ImVec2(p2.x + x + 32, p2.y + ImGui::GetWindowHeight()+ImGui::GetScrollY()), ImColor(100, 100, 100, 50));
 	}
 
 	for (int i = 0; i < track.notes.size(); i++)
 	{
 		// set up note rectangle dimensions
-		float note_w = track.notes[i].duration / ticksPerColum;
-		float note_x = ((track.notes[i].start) / ticksPerColum) + 32;
+		float note_w = track.notes[i].duration / prdata.ticksPerColum;
+		float note_x = ((track.notes[i].start) / prdata.ticksPerColum) + 32;
 		int noteRange = track.maxNote - track.minNote;
 		// float note_y = ((noteRange) - (track.notes[i].key - track.minNote)) * noteHeight;
-		float note_y = (127-track.notes[i].key) * noteHeight;
+		float note_y = (127-track.notes[i].key) * prdata.noteHeight;
 
 		// float note_y = ((track.maxNote) - (track.notes[i].key - track.minNote)) * noteHeight;
 
 		// turn into imgui vecs
-		ImVec2 size = ImVec2(note_w, noteHeight);
+		ImVec2 size = ImVec2(note_w, prdata.noteHeight);
 		// ImVec2 pos = ImVec2(style.WindowPadding.x + note_x, style.WindowPadding.y + note_y);
 		ImVec2 pos = ImVec2(note_x, note_y);
 
@@ -350,7 +358,7 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 		// draw_list->AddRectFilled(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
 
 		ImGui::SetCursorPos(ImVec2(note_x,note_y));
-		ImVec2 button_size(note_w, noteHeight);
+		ImVec2 button_size(note_w, prdata.noteHeight);
 		ImGui::PushID(i);
 		// ImGui::PushStyleColor(ImGuiCol_Button,key_color);
 		ImGui::Button(" ",button_size);
@@ -358,37 +366,37 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 		ImGui::PopID();
 
 		// show outline around button when hovered
-		if (ImGui::IsItemHovered())
+		if (prdata.sel==i)
 		{
 			// print("hovering..");
-			draw_list->AddRect(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), ImColor(255, 255, 0), 1.0f, ImDrawCornerFlags_All);
+			draw_list->AddRect(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + prdata.noteHeight), ImColor(255, 255, 0), 1.0f, ImDrawCornerFlags_All);
 		}
 
 		// selects note
 		if (ImGui::IsItemClicked())
 		{
-			sel = i;
+			prdata.sel = i;
 			// print("isitemclicked", i, " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
-			mynote = track.notes[sel];
+			prdata.mynote = track.notes[prdata.sel];
 		}
 	}
 
 	// handles moving note
 	if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
 	{
-		print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
+		print("sel", prdata.sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
 		ImVec2 new_pos = ImGui::GetMouseDragDelta();
 		// points[i].x = pos.x;
-		if (sel != -1)
+		if (prdata.sel != -1)
 		{
 			// points[sel].x = myvec.x + new_pos.x;
 			// ((float)(track.tpq / ticksPerColum)/4)
 			float hey = ((float)(track.tpq) / 4);
-			track.notes[sel].start = mynote.start + (new_pos.x * ticksPerColum);
+			track.notes[prdata.sel].start = prdata.mynote.start + (new_pos.x * prdata.ticksPerColum);
 			// snap to grid
-			track.notes[sel].start = round(track.notes[sel].start / hey) * hey;
+			track.notes[prdata.sel].start = round(track.notes[prdata.sel].start / hey) * hey;
 			// points[sel].y = round((myvec.y + new_pos.y)/32)*32;
-			track.notes[sel].key = mynote.key + (round(new_pos.y / noteHeight) * -1);
+			track.notes[prdata.sel].key = prdata.mynote.key + (round(new_pos.y / prdata.noteHeight) * -1);
 		}
 	}
 
@@ -398,8 +406,8 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 		int bw = piano_keys[i%12];
 		uint32_t key_color = ImColor(bw,bw,bw);
 
-		ImGui::SetCursorPos(ImVec2(ImGui::GetScrollX(),noteHeight*i2));
-		ImVec2 button_size(32, noteHeight);
+		ImGui::SetCursorPos(ImVec2(ImGui::GetScrollX(),prdata.noteHeight*i2));
+		ImVec2 button_size(32, prdata.noteHeight);
 		ImGui::PushID(i);
 		ImGui::PushStyleColor(ImGuiCol_Button,key_color);
 		ImGui::Button(" ",button_size);
@@ -427,12 +435,12 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 
 
 	// note debuggggg
-	float nnn = floor(relative_mouseY/noteHeight);
+	float nnn = floor(relative_mouseY/prdata.noteHeight);
 	int notenum = 127-int(nnn);
 	int octave = int(notenum / 12) - 1;
 	int note = (notenum % 12);
 	// print(note_names[note]);
-	ImGui::SetCursorPos(ImVec2(ImGui::GetScrollX()+38,nnn*noteHeight));
+	ImGui::SetCursorPos(ImVec2(ImGui::GetScrollX()+38,nnn*prdata.noteHeight));
 	std::string text = note_names[note] + " " + std::to_string(notenum);
 	ImGui::Text(text.c_str());
 
@@ -440,7 +448,7 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 	if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 	{
 		print("ImGuiMouseButton_Left released");
-		sel = -1;
+		prdata.sel = -1;
 	}
 
 	ImGui::End();
@@ -565,6 +573,8 @@ int main(void)
 	// mid.printData();
 	std::vector<MidiTrack> tracks = mid.makeStructs();
 
+	pianoRoll pianoroll_data;
+
 	while (isRunning)
 	{
 		SDL_Event Event;
@@ -620,7 +630,7 @@ int main(void)
 
 			// SequencerWindow(&isOpenSequencerWindow, points);
 			ShowExampleAppDockSpace(&isOpenSequencerWindow);
-			SequencerWindow(&isOpenSequencerWindow, tracks[0]);
+			SequencerWindow(&isOpenSequencerWindow, tracks[0], pianoroll_data);
 			ImGui::ShowDemoWindow(&isOpenSequencerWindow);
 			ImGui::PopFont();
 		}
