@@ -14,12 +14,13 @@
 #include <SDL2/SDL_opengl.h>
 
 #include "MidiFileWrapper.h"
+#include "imfilebrowser.h"
 
 #define WinWidth 320 * 2
 #define WinHeight 240 * 2
 
-
-
+#include "midifile/MidiFile.h"
+// #include "midifile/Options.h"
 // int piano_keys[12]={0,255,0,255,0,0,255,0,255,0,255,0};
 int piano_keys[12]={255,0,255,0,255,255,0,255,0,255,0,255};
 std::string note_names[12]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
@@ -202,35 +203,35 @@ void ShowExampleAppDockSpace(bool *p_open)
 
 	if (ImGui::BeginMenuBar())
 	{
-		if (ImGui::BeginMenu("Options"))
+		if (ImGui::BeginMenu("File"))
 		{
 			// Disabling fullscreen would allow the window to be moved to the front of other windows,
 			// which we can't undo at the moment without finer window depth/z control.
 			ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen);
 			ImGui::MenuItem("Padding", NULL, &opt_padding);
-			ImGui::Separator();
+			// ImGui::Separator();
 
-			if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))
-			{
-				dockspace_flags ^= ImGuiDockNodeFlags_NoSplit;
-			}
-			if (ImGui::MenuItem("Flag: NoResize", "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))
-			{
-				dockspace_flags ^= ImGuiDockNodeFlags_NoResize;
-			}
-			if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0))
-			{
-				dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode;
-			}
-			if (ImGui::MenuItem("Flag: AutoHideTabBar", "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))
-			{
-				dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar;
-			}
-			if (ImGui::MenuItem("Flag: PassthruCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen))
-			{
-				dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode;
-			}
-			ImGui::Separator();
+			// if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))
+			// {
+			// 	dockspace_flags ^= ImGuiDockNodeFlags_NoSplit;
+			// }
+			// if (ImGui::MenuItem("Flag: NoResize", "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))
+			// {
+			// 	dockspace_flags ^= ImGuiDockNodeFlags_NoResize;
+			// }
+			// if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0))
+			// {
+			// 	dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode;
+			// }
+			// if (ImGui::MenuItem("Flag: AutoHideTabBar", "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))
+			// {
+			// 	dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar;
+			// }
+			// if (ImGui::MenuItem("Flag: PassthruCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0, opt_fullscreen))
+			// {
+			// 	dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode;
+			// }
+			// ImGui::Separator();
 
 			if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
 				*p_open = false;
@@ -360,7 +361,7 @@ int main(void)
 	std::vector<ImVec2> points = {ImVec2(0, 0), ImVec2(32, 32), ImVec2(32, 64), ImVec2(32, 128)};
 
 	MidiFileWrapper mid;
-	int err = mid.init("./res/midis/ableton.mid");
+	int err = mid.init("./res/midis/background_guitar.mid");
 	if (err == 0)
 	{
 		std::cout << "error loading midi!!" << std::endl;
@@ -368,7 +369,16 @@ int main(void)
 	// mid.printData();
 	std::vector<MidiTrack> tracks = mid.makeStructs();
 
-	pianoRoll pianoroll_data;
+
+	// smf::MidiFile mymidifile;
+	// int midifile_err = mymidifile.read("./res/midis/abandoned-ship.mid");
+	// if (midifile_err == 0)
+	// {
+	// 	std::cout << "error loading midi!! :(" << std::endl;
+	// }
+	// mymidifile.linkNotePairs();
+
+	// pianoRoll pianoroll_data;
 
 	while (isRunning)
 	{
@@ -415,17 +425,18 @@ int main(void)
 
 			ImGui::PushFont(font);
 
-			ImGui::Begin("debug");
+			// ImGui::Begin("debug");
 
-			// ImGui::SliderFloat("rotation", &rot_amount, 0.0f, 360.0f);
+			// // ImGui::SliderFloat("rotation", &rot_amount, 0.0f, 360.0f);
 
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+			// ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-			ImGui::End();
+			// ImGui::End();
 
 			// SequencerWindow(&isOpenSequencerWindow, points);
 			ShowExampleAppDockSpace(&isOpenSequencerWindow);
-			SequencerWindow(&isOpenSequencerWindow, tracks[0], pianoroll_data);
+			// SequencerWindow(&isOpenSequencerWindow, tracks[0], pianoroll_data);
+			SequencerWindow(&isOpenSequencerWindow, tracks[0]);
 			ImGui::ShowDemoWindow(&isOpenSequencerWindow);
 			ImGui::PopFont();
 		}

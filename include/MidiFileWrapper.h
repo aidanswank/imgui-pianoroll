@@ -70,6 +70,8 @@ struct MidiFileWrapper
         std::cout << "TRACKS: " << trackCount << std::endl;
         // std::cout << "MSPT: " << mspt << std::endl;
 
+        print("track count", midifile.getTrackCount());
+
         return err;
     }
 
