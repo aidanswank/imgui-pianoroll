@@ -22,6 +22,8 @@
 #include "midifile/MidiFile.h"
 // #include "midifile/Options.h"
 // int piano_keys[12]={0,255,0,255,0,0,255,0,255,0,255,0};
+	bool isOpenSequencerWindow = true;
+
 int piano_keys[12]={255,0,255,0,255,255,0,255,0,255,0,255};
 std::string note_names[12]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
 
@@ -132,7 +134,7 @@ static void HelpMarker(const char *desc)
 	}
 }
 
-void ShowExampleAppDockSpace(bool *p_open)
+void ShowExampleAppDockSpace(bool *p_open, std::vector<smf::MidiFile>& midiFiles, smf::MidiFile& midiFile)
 {
 	// If you strip some features of, this demo is pretty much equivalent to calling DockSpaceOverViewport()!
 	// In most cases you should be able to just call DockSpaceOverViewport() and ignore all the code below!
@@ -201,14 +203,29 @@ void ShowExampleAppDockSpace(bool *p_open)
 		// ShowDockingDisabledMessage();
 	}
 
+    // create a file browser instance
+    static ImGui::FileBrowser fileDialog;
+    
+    // (optional) set browser properties
+    fileDialog.SetTitle("Open a midi file...");
+    fileDialog.SetTypeFilters({ ".mid", ".midi" });
+
+	// static bool opt_openFile = false;
+
 	if (ImGui::BeginMenuBar())
 	{
 		if (ImGui::BeginMenu("File"))
 		{
 			// Disabling fullscreen would allow the window to be moved to the front of other windows,
 			// which we can't undo at the moment without finer window depth/z control.
-			ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen);
-			ImGui::MenuItem("Padding", NULL, &opt_padding);
+			// ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen);
+			// ImGui::MenuItem("Padding", NULL, &opt_padding);
+
+			if(ImGui::MenuItem("Open midi", NULL))
+			{
+				// print("clicked open?");
+				fileDialog.Open();
+			}
 			// ImGui::Separator();
 
 			// if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))
@@ -233,10 +250,19 @@ void ShowExampleAppDockSpace(bool *p_open)
 			// }
 			// ImGui::Separator();
 
+			if(ImGui::MenuItem("Write midi", NULL))
+			{
+				print("write midi");
+				midiFile.sortTracks();
+				midiFile.write("new.mid");
+			}
+
 			if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
 				*p_open = false;
 			ImGui::EndMenu();
 		}
+
+		
 		HelpMarker(
 			"Hello world :P"
 			"\n"
@@ -246,6 +272,27 @@ void ShowExampleAppDockSpace(bool *p_open)
 	}
 
 	ImGui::End();
+
+	fileDialog.Display();
+
+	if(fileDialog.HasSelected())
+	{
+		std::cout << "Selected filename" << fileDialog.GetSelected().string() << std::endl;
+
+		smf::MidiFile mymidifile;
+		int midifile_err = mymidifile.read(fileDialog.GetSelected().string());
+		if (midifile_err == 0)
+		{
+			std::cout << "error loading midi!! :(" << std::endl;
+		}
+		mymidifile.linkNotePairs();
+
+		midiFiles.push_back(std::move(mymidifile));
+		// print(midiFiles.size());
+
+		fileDialog.ClearSelected();
+	}
+
 }
 
 #include "piano_roll.h"
@@ -356,12 +403,10 @@ int main(void)
 
 	bool isRunning = true;
 	bool isFullScreen = true;
-
-	bool isOpenSequencerWindow = true;
-	std::vector<ImVec2> points = {ImVec2(0, 0), ImVec2(32, 32), ImVec2(32, 64), ImVec2(32, 128)};
+	// std::vector<ImVec2> points = {ImVec2(0, 0), ImVec2(32, 32), ImVec2(32, 64), ImVec2(32, 128)};
 
 	MidiFileWrapper mid;
-	int err = mid.init("./res/midis/background_guitar.mid");
+	int err = mid.init("./res/midis/ableton.mid");
 	if (err == 0)
 	{
 		std::cout << "error loading midi!!" << std::endl;
@@ -369,14 +414,21 @@ int main(void)
 	// mid.printData();
 	std::vector<MidiTrack> tracks = mid.makeStructs();
 
+	std::vector<smf::MidiFile> midiFiles;
 
-	// smf::MidiFile mymidifile;
-	// int midifile_err = mymidifile.read("./res/midis/abandoned-ship.mid");
-	// if (midifile_err == 0)
-	// {
-	// 	std::cout << "error loading midi!! :(" << std::endl;
-	// }
-	// mymidifile.linkNotePairs();
+
+	smf::MidiFile mymidifile;
+	int midifile_err = mymidifile.read("./res/midis/ableton.mid");
+	if (midifile_err == 0)
+	{
+		std::cout << "error loading midi!! :(" << std::endl;
+	}
+	mymidifile.absoluteTicks();
+	mymidifile.linkNotePairs();
+	print(mymidifile.isAbsoluteTicks());
+	// mymidifile.setTicksPerQuarterNote(48);
+	// print("tpq",mymidifile.getTicksPerQuarterNote());
+	// mymidifile.write("newmidifile.mid");
 
 	// pianoRoll pianoroll_data;
 
@@ -434,9 +486,10 @@ int main(void)
 			// ImGui::End();
 
 			// SequencerWindow(&isOpenSequencerWindow, points);
-			ShowExampleAppDockSpace(&isOpenSequencerWindow);
+			ShowExampleAppDockSpace(&isOpenSequencerWindow, midiFiles, mymidifile);
 			// SequencerWindow(&isOpenSequencerWindow, tracks[0], pianoroll_data);
-			SequencerWindow(&isOpenSequencerWindow, tracks[0]);
+			// SequencerWindow(&isOpenSequencerWindow, tracks[0]);
+			SequencerWindow(&isOpenSequencerWindow, tracks[0], mymidifile[0]); // 3rd revision
 			ImGui::ShowDemoWindow(&isOpenSequencerWindow);
 			ImGui::PopFont();
 		}

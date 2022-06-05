@@ -60,6 +60,7 @@ struct MidiFileWrapper
         int err = midifile.read(filename.c_str());
         midifile.doTimeAnalysis();
         midifile.linkNotePairs();
+        // midifile.setTicksPerQuarterNote(240);
 
         trackCount = midifile.getTrackCount();
         tpq = midifile.getTicksPerQuarterNote();

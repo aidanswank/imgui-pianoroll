@@ -6,12 +6,19 @@
 // 	float noteHeight = 8;
 // };
 
-void SequencerWindow(bool *isOpen, MidiTrack &track)
+int snap(float num, int by)
+{
+    return round(num/by)*by;
+}
+
+void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTrack)
 {
 
 	static int sel = -1; // track note index??
 	// ImVec2 myvec = {-1,-1};
 	static Note mynote; // last note
+    static Note lastNote; // last note
+    static smf::MidiEvent lastEventClicked;
 	static float ticksPerColum = 2;
 	static float noteHeight = 8;
 
@@ -27,20 +34,13 @@ void SequencerWindow(bool *isOpen, MidiTrack &track)
 	// ImGui::End();
 
 	ImGui::Begin("pianoroll", isOpen, ImGuiWindowFlags_HorizontalScrollbar);
-static ImGuiAxis toolbar1_axis = ImGuiAxis_X;
-DockingToolbar("Toolbar1", &toolbar1_axis);
-static ImGuiAxis toolbar2_axis = ImGuiAxis_Y;
-DockingToolbar("Toolbar2", &toolbar2_axis);
+    static ImGuiAxis toolbar1_axis = ImGuiAxis_X;
+    DockingToolbar("Toolbar1", &toolbar1_axis);
+    static ImGuiAxis toolbar2_axis = ImGuiAxis_Y;
+    DockingToolbar("Toolbar2", &toolbar2_axis);
 	// const ImVec2 p = ImGui::GetCursorScreenPos();
 
 	const ImVec2 wp = ImGui::GetWindowPos();
-
-	// ImGui::BeginChild("child",ImVec2(ImGui::GetWindowWidth(),24),true);
-    // // ImGui::BeginGroup();
-	// ImGui::SliderFloat("width", &ticksPerColum, 1.f, 32);
-	// // ImGui::Text("childdd");
-	// // ImGui::EndGroup();
-	// ImGui::EndChild();
 
 	ImDrawList *draw_list = ImGui::GetWindowDrawList();
 
@@ -67,119 +67,186 @@ DockingToolbar("Toolbar2", &toolbar2_axis);
 		draw_list->AddLine(ImVec2(p2.x + x + 32, p2.y + 0), ImVec2(p2.x + x + 32, p2.y + ImGui::GetWindowHeight()+ImGui::GetScrollY()), ImColor(100, 100, 100, 50));
 	}
 
-	for (int i = 0; i < track.notes.size(); i++)
-	{
-
+    for(int i = 0; i < midiTrack.size(); i++)
+    {
+        // print(midiTrack[i].tick);
         ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
         ImGui::PopStyleColor();
 
-		// set up note rectangle dimensions
-		float note_w = track.notes[i].duration / ticksPerColum;
-		float note_x = ((track.notes[i].start) / ticksPerColum) + 32;
-		int noteRange = track.maxNote - track.minNote;
-		// float note_y = ((noteRange) - (track.notes[i].key - track.minNote)) * noteHeight;
-		float note_y = (127-track.notes[i].key) * noteHeight;
+        smf::MidiEvent *event = &midiTrack[i];
 
-		// float note_y = ((track.maxNote) - (track.notes[i].key - track.minNote)) * noteHeight;
+        if(event->isNoteOn())
+        {
+            float duration = event->getTickDuration();
+            float tick = event->tick;
+            float key = event->getKeyNumber();
+            // set up note rectangle dimensions
+            float note_w = duration / ticksPerColum;
+            float note_x = (tick / ticksPerColum) + 32;
+            // int noteRange = track.maxNote - track.minNote;
+            // // float note_y = ((noteRange) - (track.notes[i].key - track.minNote)) * noteHeight;
+            float note_y = (127-key) * noteHeight;
 
-		// turn into imgui vecs
-		// ImVec2 size = ImVec2(note_w, noteHeight);
-		// ImVec2 pos = ImVec2(style.WindowPadding.x + note_x, style.WindowPadding.y + note_y);
-		// ImVec2 pos = ImVec2(note_x, note_y);
-		// ImGui::SetCursorPos(pos);
+            ImVec2 size = ImVec2(note_w, noteHeight);
+            ImGui::SetCursorPos(ImVec2(note_x,note_y));
+            ImVec2 button_size(note_w, noteHeight);
+            ImGui::PushID(i);
+            // ImGui::PushStyleColor(ImGuiCol_Button,key_color);
+            ImGui::Button(" ",button_size);
+            // ImGui::PopStyleColor();
+            ImGui::PopID();
 
-		// set xy pos were we draw button
-		// print(p.x,p.y);
+            // selects note
+            if (ImGui::IsItemClicked())
+            {
+                sel = i;
+                // mynote = track.notes[sel];
+                lastEventClicked = midiTrack[sel];
+                print("sel",sel);
+            }
+        };
 
-        smf::MidiEvent *endNote = track.notes[i].endNote;
-        int endDur = endNote->getTickDuration();
-        int endX = ((float)endNote->tick / ticksPerColum) + 32 - 8;
-        // print(dur);
-        ImVec2 endbtnsize = ImVec2(8, noteHeight);
-        ImVec2 endbtnpos = ImVec2(endX, note_y);
+        // handles moving note
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        {
+            // print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
+            ImVec2 new_pos = ImGui::GetMouseDragDelta();
+            // points[i].x = pos.x;
+            if (sel != -1)
+            {
+                // ((float)(track.tpq / ticksPerColum)/4)
+                float hey = (96.f / 4);
+                int offset = (new_pos.x * ticksPerColum);
+                int dur = midiTrack[sel].getTickDuration();
+                int s = snap(lastEventClicked.tick + offset,hey);
+                midiTrack[sel].tick = s;
 
-		ImGui::SetCursorPos(endbtnpos);
-        ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
-		ImGui::Button(std::to_string(i).c_str(),endbtnsize);
-        ImGui::PopStyleColor();
+                // move other note
+                midiTrack[sel].getLinkedEvent()->tick = dur + s;
+                // print(midiTrack[sel].tick,midiTrack[sel].getLinkedEvent()->tick);
 
-        smf::MidiEvent *startNote = track.notes[i].startNote;
-        int startDur = startNote->getTickDuration();
-        int startX = ((float)startNote->tick / ticksPerColum) + 32;
-        // print(dur);
-        ImVec2 startbtnsize = ImVec2(8, noteHeight);
-        ImVec2 startbtnpos = ImVec2(startX, note_y);
+                int key = lastEventClicked.getKeyNumber() + (round(new_pos.y / noteHeight) * -1);
+                midiTrack[sel].setKeyNumber(key);
+                midiTrack[sel].getLinkedEvent()->setKeyNumber(key);
 
-		ImGui::SetCursorPos(startbtnpos);
-        ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
-		ImGui::Button(std::to_string(i).c_str(),startbtnsize);
-        ImGui::PopStyleColor();
+            }
+        }
+    }
 
-		// id because we are using invisible buttons
-		// ImGui::PushID(i);
-		// ImGui::InvisibleButton(" ", size);
-		// ImGui::PopID();
+	// for (int i = 0; i < track.notes.size(); i++)
+	// {
+
+    //     ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
+    //     ImGui::PopStyleColor();
+
+	// 	// set up note rectangle dimensions
+	// 	float note_w = track.notes[i].duration / ticksPerColum;
+	// 	float note_x = ((track.notes[i].start) / ticksPerColum) + 32;
+	// 	int noteRange = track.maxNote - track.minNote;
+	// 	// float note_y = ((noteRange) - (track.notes[i].key - track.minNote)) * noteHeight;
+	// 	float note_y = (127-track.notes[i].key) * noteHeight;
+
+	// 	// float note_y = ((track.maxNote) - (track.notes[i].key - track.minNote)) * noteHeight;
+
+	// 	// turn into imgui vecs
+	// 	// ImVec2 size = ImVec2(note_w, noteHeight);
+	// 	// ImVec2 pos = ImVec2(style.WindowPadding.x + note_x, style.WindowPadding.y + note_y);
+	// 	// ImVec2 pos = ImVec2(note_x, note_y);
+	// 	// ImGui::SetCursorPos(pos);
+
+	// 	// set xy pos were we draw button
+	// 	// print(p.x,p.y);
+
+    //     smf::MidiEvent *endNote = track.notes[i].endNote;
+    //     int endDur = endNote->getTickDuration();
+    //     int endX = ((float)endNote->tick / ticksPerColum) + 32 - 8;
+    //     // print(dur);
+    //     ImVec2 endbtnsize = ImVec2(8, noteHeight);
+    //     ImVec2 endbtnpos = ImVec2(endX, note_y);
+
+	// 	ImGui::SetCursorPos(endbtnpos);
+    //     ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
+	// 	ImGui::Button(std::to_string(i).c_str(),endbtnsize);
+    //     ImGui::PopStyleColor();
+
+    //     smf::MidiEvent *startNote = track.notes[i].startNote;
+    //     int startDur = startNote->getTickDuration();
+    //     int startX = ((float)startNote->tick / ticksPerColum) + 32;
+    //     // print(dur);
+    //     ImVec2 startbtnsize = ImVec2(8, noteHeight);
+    //     ImVec2 startbtnpos = ImVec2(startX, note_y);
+
+	// 	ImGui::SetCursorPos(startbtnpos);
+    //     ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
+	// 	ImGui::Button(std::to_string(i).c_str(),startbtnsize);
+    //     ImGui::PopStyleColor();
+
+	// 	// id because we are using invisible buttons
+	// 	// ImGui::PushID(i);
+	// 	// ImGui::InvisibleButton(" ", size);
+	// 	// ImGui::PopID();
         
 
-		// DEBUG button 
+	// 	// DEBUG button 
 
-        		// ImGui::PushStyleColor(ImGuiCol_Button,key_color);
+    //     		// ImGui::PushStyleColor(ImGuiCol_Button,key_color);
 
-		// ImGui::Button(std::to_string(i).c_str(),size);
+	// 	// ImGui::Button(std::to_string(i).c_str(),size);
 
-		// ImGui::SameLine();
+	// 	// ImGui::SameLine();
 
-		// get color from current loaded style
-		// uint32_t mycolor = ImColor(style.Colors[ImGuiCol_Button]);
-		// draw_list->AddRectFilled(ImVec2(p.x + note_x, p.y + note_y), ImVec2(p.x + note_x + note_w, p.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
+	// 	// get color from current loaded style
+	// 	// uint32_t mycolor = ImColor(style.Colors[ImGuiCol_Button]);
+	// 	// draw_list->AddRectFilled(ImVec2(p.x + note_x, p.y + note_y), ImVec2(p.x + note_x + note_w, p.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
 
-		// draw_list->AddRectFilled(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
+	// 	// draw_list->AddRectFilled(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
 
-		ImVec2 size = ImVec2(note_w, noteHeight);
-		ImGui::SetCursorPos(ImVec2(note_x,note_y));
-		ImVec2 button_size(note_w, noteHeight);
-		ImGui::PushID(i);
-		// ImGui::PushStyleColor(ImGuiCol_Button,key_color);
-		ImGui::Button(" ",button_size);
-		// ImGui::PopStyleColor();
-		ImGui::PopID();
+	// 	ImVec2 size = ImVec2(note_w, noteHeight);
+	// 	ImGui::SetCursorPos(ImVec2(note_x,note_y));
+	// 	ImVec2 button_size(note_w, noteHeight);
+	// 	ImGui::PushID(i);
+	// 	// ImGui::PushStyleColor(ImGuiCol_Button,key_color);
+	// 	ImGui::Button(" ",button_size);
+	// 	// ImGui::PopStyleColor();
+	// 	ImGui::PopID();
 
-		// show outline around button when hovered
-		// if (sel==i)
-        if (ImGui::IsItemHovered())
-		{
-			// print("hovering..");
-			draw_list->AddRect(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), ImColor(255, 255, 0), 1.0f, ImDrawCornerFlags_All);
-		}
+	// 	// show outline around button when hovered
+	// 	// if (sel==i)
+    //     if (ImGui::IsItemHovered())
+	// 	{
+	// 		// print("hovering..");
+	// 		draw_list->AddRect(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), ImColor(255, 255, 0), 1.0f, ImDrawCornerFlags_All);
+	// 	}
 
-		// selects note
-		if (ImGui::IsItemClicked())
-		{
-			sel = i;
-			// print("isitemclicked", i, " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
-			mynote = track.notes[sel];
-		}
-	}
+	// 	// selects note
+	// 	if (ImGui::IsItemClicked())
+	// 	{
+	// 		sel = i;
+	// 		// print("isitemclicked", i, " pos ", io.MouseClickedPos[0].x, " ", io.MouseClickedPos[0].y);
+	// 		mynote = track.notes[sel];
+	// 	}
+	// }
 
-	// handles moving note
-	if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
-	{
-		print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
-		ImVec2 new_pos = ImGui::GetMouseDragDelta();
-		// points[i].x = pos.x;
-		if (sel != -1)
-		{
-			// points[sel].x = myvec.x + new_pos.x;
-			// ((float)(track.tpq / ticksPerColum)/4)
-			float hey = ((float)(track.tpq) / 4);
-			track.notes[sel].start = mynote.start + (new_pos.x * ticksPerColum);
-			// snap to grid
-			track.notes[sel].start = round(track.notes[sel].start / hey) * hey;
-			// points[sel].y = round((myvec.y + new_pos.y)/32)*32;
-			track.notes[sel].key = mynote.key + (round(new_pos.y / noteHeight) * -1);
-		}
-	}
+	// // handles moving note
+	// if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+	// {
+	// 	// print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
+	// 	ImVec2 new_pos = ImGui::GetMouseDragDelta();
+	// 	// points[i].x = pos.x;
+	// 	if (sel != -1)
+	// 	{
+	// 		// points[sel].x = myvec.x + new_pos.x;
+	// 		// ((float)(track.tpq / ticksPerColum)/4)
+	// 		float hey = ((float)(track.tpq) / 4);
+	// 		track.notes[sel].start = mynote.start + (new_pos.x * ticksPerColum);
+	// 		// snap to grid
+	// 		track.notes[sel].start = round(track.notes[sel].start / hey) * hey;
+	// 		// points[sel].y = round((myvec.y + new_pos.y)/32)*32;
+	// 		track.notes[sel].key = mynote.key + (round(new_pos.y / noteHeight) * -1);
+	// 	}
+	// }
 
+    // draw piano buttons
 	for(int i = 0; i < 128; i++)
 	{
 		int i2 = 127-i;
