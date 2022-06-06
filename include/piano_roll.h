@@ -15,6 +15,8 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 {
 
 	static int sel = -1; // track note index??
+    static int noteleft_dragIdx = -1;
+    static int noteright_dragIdx = -1;
 	// ImVec2 myvec = {-1,-1};
 	static Note mynote; // last note
     static Note lastNote; // last note
@@ -87,6 +89,38 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
             // // float note_y = ((noteRange) - (track.notes[i].key - track.minNote)) * noteHeight;
             float note_y = (127-key) * noteHeight;
 
+
+            // smf::MidiEvent *endNote = track.notes[i].endNote;
+            int startX = ((float)event->tick / ticksPerColum) + 32;
+            int endX = ((float)event->tick / ticksPerColum) + 32 + note_w - 8;
+
+            // print(dur);
+            ImVec2 startbtnsize = ImVec2(8, noteHeight);
+            ImVec2 startbtnpos = ImVec2(startX, note_y);
+            ImVec2 endbtnpos = ImVec2(endX, note_y);
+
+            ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(255,0,0,255));
+
+            ImGui::SetCursorPos(startbtnpos);
+		    ImGui::Button(std::to_string(i).c_str(),startbtnsize);
+            // selects note
+            if (ImGui::IsItemClicked())
+            {
+                // print("start??",i);
+                noteleft_dragIdx = i;
+                lastEventClicked = midiTrack[noteleft_dragIdx];
+            }
+            ImGui::SetCursorPos(endbtnpos);
+    		ImGui::Button(std::to_string(i).c_str(),startbtnsize);
+            // selects note
+            if (ImGui::IsItemClicked())
+            {
+                // print("start??",i);
+                noteright_dragIdx = i;
+                lastEventClicked = *midiTrack[noteright_dragIdx].getLinkedEvent();
+            }
+            ImGui::PopStyleColor();
+
             ImVec2 size = ImVec2(note_w, noteHeight);
             ImGui::SetCursorPos(ImVec2(note_x,note_y));
             ImVec2 button_size(note_w, noteHeight);
@@ -112,10 +146,10 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
             // print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
             ImVec2 new_pos = ImGui::GetMouseDragDelta();
             // points[i].x = pos.x;
+                float hey = (96.f / 4);
             if (sel != -1)
             {
                 // ((float)(track.tpq / ticksPerColum)/4)
-                float hey = (96.f / 4);
                 int offset = (new_pos.x * ticksPerColum);
                 int dur = midiTrack[sel].getTickDuration();
                 int s = snap(lastEventClicked.tick + offset,hey);
@@ -129,6 +163,22 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
                 midiTrack[sel].setKeyNumber(key);
                 midiTrack[sel].getLinkedEvent()->setKeyNumber(key);
 
+            }
+            if(noteleft_dragIdx != -1)
+            {
+                print(new_pos.x,new_pos.y);
+                int offset = (new_pos.x * ticksPerColum);
+                int s = snap(lastEventClicked.tick + offset,hey);
+                // print(s);
+                midiTrack[noteleft_dragIdx].tick = s;
+            }
+            if(noteright_dragIdx != -1)
+            {
+                print(new_pos.x,new_pos.y);
+                int offset = (new_pos.x * ticksPerColum);
+                int s = snap(lastEventClicked.tick + offset,hey);
+                // print(s);
+                midiTrack[noteright_dragIdx].getLinkedEvent()->tick = s;
             }
         }
     }
@@ -296,6 +346,8 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 	{
 		print("ImGuiMouseButton_Left released");
 		sel = -1;
+        noteleft_dragIdx = -1;
+        noteright_dragIdx = -1;
 	}
 
 	ImGui::End();
