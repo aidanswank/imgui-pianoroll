@@ -254,7 +254,7 @@ void ShowExampleAppDockSpace(bool *p_open, std::vector<smf::MidiFile>& midiFiles
 			{
 				print("write midi");
 				midiFile.sortTracks();
-				midiFile.write("new.mid");
+				midiFile.write("ableton.mid");
 			}
 
 			if (ImGui::MenuItem("Close", NULL, false, p_open != NULL))
@@ -405,20 +405,20 @@ int main(void)
 	bool isFullScreen = true;
 	// std::vector<ImVec2> points = {ImVec2(0, 0), ImVec2(32, 32), ImVec2(32, 64), ImVec2(32, 128)};
 
-	MidiFileWrapper mid;
-	int err = mid.init("./res/midis/ableton.mid");
-	if (err == 0)
-	{
-		std::cout << "error loading midi!!" << std::endl;
-	}
-	// mid.printData();
-	std::vector<MidiTrack> tracks = mid.makeStructs();
+	// MidiFileWrapper mid;
+	// int err = mid.init("./res/midis/ableton.mid");
+	// if (err == 0)
+	// {
+	// 	std::cout << "error loading midi!!" << std::endl;
+	// }
+	// // mid.printData();
+	// std::vector<MidiTrack> tracks = mid.makeStructs();
 
 	std::vector<smf::MidiFile> midiFiles;
 
 
 	smf::MidiFile mymidifile;
-	int midifile_err = mymidifile.read("./res/midis/ableton.mid");
+	int midifile_err = mymidifile.read("./res/midis/Ample Guitar SC 1.mid");
 	if (midifile_err == 0)
 	{
 		std::cout << "error loading midi!! :(" << std::endl;
@@ -489,7 +489,7 @@ int main(void)
 			ShowExampleAppDockSpace(&isOpenSequencerWindow, midiFiles, mymidifile);
 			// SequencerWindow(&isOpenSequencerWindow, tracks[0], pianoroll_data);
 			// SequencerWindow(&isOpenSequencerWindow, tracks[0]);
-			SequencerWindow(&isOpenSequencerWindow, tracks[0], mymidifile[0]); // 3rd revision
+			SequencerWindow(&isOpenSequencerWindow, mymidifile); // 3rd revision
 			ImGui::ShowDemoWindow(&isOpenSequencerWindow);
 			ImGui::PopFont();
 		}

@@ -11,8 +11,10 @@ int snap(float num, int by)
     return round(num/by)*by;
 }
 
-void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTrack)
+void SequencerWindow(bool *isOpen, smf::MidiFile& midiFile)
 {
+
+    smf::MidiEventList& midiTrack = midiFile[0];
 
 	static int sel = -1; // track note index??
     static int noteleft_dragIdx = -1;
@@ -23,6 +25,8 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
     static smf::MidiEvent lastEventClicked;
 	static float ticksPerColum = 2;
 	static float noteHeight = 8;
+
+    float divsize = (96.f / 4);
 
 
 	ImGui::Begin("toptoolbar", isOpen, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_HorizontalScrollbar);
@@ -51,22 +55,30 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 	ImGuiStyle &style = ImGui::GetStyle();
 
 	// loop through all notes
-	ImVec2 p2 = ImGui::GetWindowPos();
-	// p2.x += style.WindowPadding.x;
-	// p2.y += style.WindowPadding.y;
-	p2.x -= ImGui::GetScrollX();
-	p2.y -= ImGui::GetScrollY();
+	ImVec2 relativeWindowPos = ImGui::GetWindowPos();
+	// relativeWindowPos.x += style.WindowPadding.x;
+	// relativeWindowPos.y += style.WindowPadding.y;
+	relativeWindowPos.x -= ImGui::GetScrollX();
+	relativeWindowPos.y -= ImGui::GetScrollY();
+
+	// //window + scrollpos
+	// ImVec2 relativeWindowPos = ImGui::GetWindowPos();
+	// relativeWindowPos.x -= ImGui::GetScrollX();
+	// relativeWindowPos.y -= ImGui::GetScrollY();
 
 	ImVec2 mouse_pos = ImGui::GetMousePos();
-	// print(mouse_pos.x,mouse_pos.y-p2.y);
+	// print(mouse_pos.x,mouse_pos.y-relativeWindowPos.y);
 
-	float relative_mouseY = mouse_pos.y-p2.y;
+	// float relativeMouse.y = mouse_pos.y-relativeWindowPos.y;
+	ImVec2 relativeMouse;
+	relativeMouse.x = mouse_pos.x-relativeWindowPos.x;
+	relativeMouse.y = mouse_pos.y-relativeWindowPos.y;
 
 	// grid grids
 	for (int i = 0; i < 200; i++)
 	{
-		float x = ((float)(track.tpq / ticksPerColum) / 4) * i;
-		draw_list->AddLine(ImVec2(p2.x + x + 32, p2.y + 0), ImVec2(p2.x + x + 32, p2.y + ImGui::GetWindowHeight()+ImGui::GetScrollY()), ImColor(100, 100, 100, 50));
+		float x = (divsize / ticksPerColum) * i;
+		draw_list->AddLine(ImVec2(relativeWindowPos.x + x + 32, relativeWindowPos.y + 0), ImVec2(relativeWindowPos.x + x + 32, relativeWindowPos.y + ImGui::GetWindowHeight()+ImGui::GetScrollY()), ImColor(100, 100, 100, 50));
 	}
 
     for(int i = 0; i < midiTrack.size(); i++)
@@ -79,6 +91,7 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 
         if(event->isNoteOn())
         {
+			// print("testttt");
             float duration = event->getTickDuration();
             float tick = event->tick;
             float key = event->getKeyNumber();
@@ -146,13 +159,12 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
             // print("sel", sel, " ", ImGui::GetMouseDragDelta().x, " ", ImGui::GetMouseDragDelta().y);
             ImVec2 new_pos = ImGui::GetMouseDragDelta();
             // points[i].x = pos.x;
-                float hey = (96.f / 4);
             if (sel != -1)
             {
                 // ((float)(track.tpq / ticksPerColum)/4)
                 int offset = (new_pos.x * ticksPerColum);
                 int dur = midiTrack[sel].getTickDuration();
-                int s = snap(lastEventClicked.tick + offset,hey);
+                int s = snap(lastEventClicked.tick + offset,divsize);
                 midiTrack[sel].tick = s;
 
                 // move other note
@@ -168,7 +180,7 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
             {
                 print(new_pos.x,new_pos.y);
                 int offset = (new_pos.x * ticksPerColum);
-                int s = snap(lastEventClicked.tick + offset,hey);
+                int s = snap(lastEventClicked.tick + offset,divsize);
                 // print(s);
                 midiTrack[noteleft_dragIdx].tick = s;
             }
@@ -176,7 +188,7 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
             {
                 print(new_pos.x,new_pos.y);
                 int offset = (new_pos.x * ticksPerColum);
-                int s = snap(lastEventClicked.tick + offset,hey);
+                int s = snap(lastEventClicked.tick + offset,divsize);
                 // print(s);
                 midiTrack[noteright_dragIdx].getLinkedEvent()->tick = s;
             }
@@ -249,7 +261,7 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 	// 	// uint32_t mycolor = ImColor(style.Colors[ImGuiCol_Button]);
 	// 	// draw_list->AddRectFilled(ImVec2(p.x + note_x, p.y + note_y), ImVec2(p.x + note_x + note_w, p.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
 
-	// 	// draw_list->AddRectFilled(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
+	// 	// draw_list->AddRectFilled(ImVec2(relativeWindowPos.x + note_x, relativeWindowPos.y + note_y), ImVec2(relativeWindowPos.x + note_x + note_w, relativeWindowPos.y + note_y + noteHeight), mycolor, 1.0f, ImDrawCornerFlags_All);
 
 	// 	ImVec2 size = ImVec2(note_w, noteHeight);
 	// 	ImGui::SetCursorPos(ImVec2(note_x,note_y));
@@ -265,7 +277,7 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
     //     if (ImGui::IsItemHovered())
 	// 	{
 	// 		// print("hovering..");
-	// 		draw_list->AddRect(ImVec2(p2.x + note_x, p2.y + note_y), ImVec2(p2.x + note_x + note_w, p2.y + note_y + noteHeight), ImColor(255, 255, 0), 1.0f, ImDrawCornerFlags_All);
+	// 		draw_list->AddRect(ImVec2(relativeWindowPos.x + note_x, relativeWindowPos.y + note_y), ImVec2(relativeWindowPos.x + note_x + note_w, relativeWindowPos.y + note_y + noteHeight), ImColor(255, 255, 0), 1.0f, ImDrawCornerFlags_All);
 	// 	}
 
 	// 	// selects note
@@ -296,6 +308,8 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 	// 	}
 	// }
 
+    // float hey = (96.f / 4);
+
     // draw piano buttons
 	for(int i = 0; i < 128; i++)
 	{
@@ -320,9 +334,9 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 
 		// draw_list->AddRectFilled(
 		// 		ImVec2(ImGui::GetWindowPos().x,
-		// 	p2.y + (i*noteHeight)),
+		// 	relativeWindowPos.y + (i*noteHeight)),
 		// 		ImVec2(ImGui::GetWindowPos().x + 32,
-		// 	p2.y + noteHeight + (i*noteHeight)),
+		// 	relativeWindowPos.y + noteHeight + (i*noteHeight)),
 		// 	key_color, 1.0f, 
 		// 	ImDrawCornerFlags_All
 		// );
@@ -332,7 +346,7 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 
 
 	// note debuggggg
-	float nnn = floor(relative_mouseY/noteHeight);
+	float nnn = floor(relativeMouse.y/noteHeight);
 	int notenum = 127-int(nnn);
 	int octave = int(notenum / 12) - 1;
 	int note = (notenum % 12);
@@ -348,6 +362,38 @@ void SequencerWindow(bool *isOpen, MidiTrack &track, smf::MidiEventList& midiTra
 		sel = -1;
         noteleft_dragIdx = -1;
         noteright_dragIdx = -1;
+	}
+
+	if(sel==-1&&noteleft_dragIdx==-1&&noteright_dragIdx==-1)
+	{
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+		{
+
+			int nnn = (floor(relativeMouse.y/noteHeight)*-1) - 1;
+
+			int tick = (mouse_pos.x-32+ImGui::GetScrollX()-ImGui::GetWindowPos().x) * ticksPerColum;
+
+			// tick = snap(tick,divsize);
+			tick = floor(tick/divsize)*divsize;
+
+			smf::MidiEvent eventOn;
+			eventOn.tick = tick;
+			eventOn.track = 0;
+			eventOn.makeNoteOn(0, nnn, 60);
+			midiFile.addEvent(eventOn);
+
+			smf::MidiEvent eventOff;
+			eventOff.tick = tick+(divsize*1);
+			eventOff.track = 0;
+			eventOff.makeNoteOff(0,nnn,0);
+			midiFile.addEvent(eventOff);
+
+			midiFile.linkNotePairs();
+
+			// event.makeNoteOff();
+			// midiFile.addEvent(event);
+			print("hey!!!!!!",mouse_pos.x,mouse_pos.y);
+		}
 	}
 
 	ImGui::End();
